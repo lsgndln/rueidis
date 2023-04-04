@@ -2,6 +2,7 @@ package rueidis
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -14,10 +15,10 @@ func MGetCache(client Client, ctx context.Context, ttl time.Duration, keys []str
 	if len(keys) == 0 {
 		return make(map[string]RedisMessage), nil
 	}
-	if cc, ok := client.(*clusterClient); ok {
-		return clusterMGetCache(cc, ctx, ttl, cmds.MGets(keys), keys)
+	if _, ok := client.(*singleClient); ok {
+		return clientMGetCache(client, ctx, ttl, client.B().Mget().Key(keys...).Cache(), keys)
 	}
-	return clientMGetCache(client, ctx, ttl, client.B().Mget().Key(keys...).Cache(), keys)
+	return parallelMGetCache(client, ctx, ttl, cmds.MGets(keys), keys)
 }
 
 // MGet is a helper that consults the redis directly with multiple keys by grouping keys within same slot into MGETs
@@ -25,10 +26,32 @@ func MGet(client Client, ctx context.Context, keys []string) (ret map[string]Red
 	if len(keys) == 0 {
 		return make(map[string]RedisMessage), nil
 	}
-	if cc, ok := client.(*clusterClient); ok {
-		return clusterMGet(cc, ctx, cmds.MGets(keys), keys)
+	if _, ok := client.(*singleClient); ok {
+		return clientMGet(client, ctx, client.B().Mget().Key(keys...).Build(), keys)
 	}
-	return clientMGet(client, ctx, client.B().Mget().Key(keys...).Build(), keys)
+	return parallelMGet(client, ctx, cmds.MGets(keys), keys)
+}
+
+// MSet is a helper that consults the redis directly with multiple keys by grouping keys within same slot into MSETs
+func MSet(client Client, ctx context.Context, kvs map[string]string) map[string]error {
+	if len(kvs) == 0 {
+		return make(map[string]error)
+	}
+	if _, ok := client.(*singleClient); ok {
+		return clientMSet(client, ctx, "MSET", kvs, make(map[string]error, len(kvs)))
+	}
+	return parallelMSet(client, ctx, cmds.MSets(kvs), make(map[string]error, len(kvs)))
+}
+
+// MSetNX is a helper that consults the redis directly with multiple keys by grouping keys within same slot into MSETNXs
+func MSetNX(client Client, ctx context.Context, kvs map[string]string) map[string]error {
+	if len(kvs) == 0 {
+		return make(map[string]error)
+	}
+	if _, ok := client.(*singleClient); ok {
+		return clientMSet(client, ctx, "MSETNX", kvs, make(map[string]error, len(kvs)))
+	}
+	return parallelMSet(client, ctx, cmds.MSetNXs(kvs), make(map[string]error, len(kvs)))
 }
 
 // JsonMGetCache is a helper that consults the client-side caches with multiple keys by grouping keys within same slot into JSON.MGETs
@@ -36,10 +59,10 @@ func JsonMGetCache(client Client, ctx context.Context, ttl time.Duration, keys [
 	if len(keys) == 0 {
 		return make(map[string]RedisMessage), nil
 	}
-	if cc, ok := client.(*clusterClient); ok {
-		return clusterMGetCache(cc, ctx, ttl, cmds.JsonMGets(keys, path), keys)
+	if _, ok := client.(*singleClient); ok {
+		return clientMGetCache(client, ctx, ttl, client.B().JsonMget().Key(keys...).Path(path).Cache(), keys)
 	}
-	return clientMGetCache(client, ctx, ttl, client.B().JsonMget().Key(keys...).Path(path).Cache(), keys)
+	return parallelMGetCache(client, ctx, ttl, cmds.JsonMGets(keys, path), keys)
 }
 
 // JsonMGet is a helper that consults redis directly with multiple keys by grouping keys within same slot into JSON.MGETs
@@ -47,10 +70,10 @@ func JsonMGet(client Client, ctx context.Context, keys []string, path string) (r
 	if len(keys) == 0 {
 		return make(map[string]RedisMessage), nil
 	}
-	if cc, ok := client.(*clusterClient); ok {
-		return clusterMGet(cc, ctx, cmds.JsonMGets(keys, path), keys)
+	if _, ok := client.(*singleClient); ok {
+		return clientMGet(client, ctx, client.B().JsonMget().Key(keys...).Path(path).Build(), keys)
 	}
-	return clientMGet(client, ctx, client.B().JsonMget().Key(keys...).Path(path).Build(), keys)
+	return parallelMGet(client, ctx, cmds.JsonMGets(keys, path), keys)
 }
 
 func clientMGetCache(client Client, ctx context.Context, ttl time.Duration, cmd cmds.Cacheable, keys []string) (ret map[string]RedisMessage, err error) {
@@ -69,35 +92,70 @@ func clientMGet(client Client, ctx context.Context, cmd cmds.Completed, keys []s
 	return arrayToKV(make(map[string]RedisMessage, len(keys)), arr, keys), nil
 }
 
-func clusterMGetCache(cc *clusterClient, ctx context.Context, ttl time.Duration, mgets map[uint16]cmds.Completed, keys []string) (ret map[string]RedisMessage, err error) {
+func clientMSet(client Client, ctx context.Context, mset string, kvs map[string]string, ret map[string]error) map[string]error {
+	cmd := client.B().Arbitrary(mset)
+	for k, v := range kvs {
+		cmd = cmd.Args(k, v)
+	}
+	ok, err := client.Do(ctx, cmd.Build()).AsBool()
+	if err == nil && !ok {
+		err = ErrMSetNXNotSet
+	}
+	for k := range kvs {
+		ret[k] = err
+	}
+	return ret
+}
+
+func parallelMGetCache(cc Client, ctx context.Context, ttl time.Duration, mgets map[uint16]cmds.Completed, keys []string) (ret map[string]RedisMessage, err error) {
 	return doMGets(make(map[string]RedisMessage, len(keys)), mgets, func(cmd cmds.Completed) RedisResult {
-		return cc.doCache(ctx, cmds.Cacheable(cmd), ttl)
+		return cc.DoCache(ctx, cmds.Cacheable(cmd), ttl)
 	})
 }
 
-func clusterMGet(cc *clusterClient, ctx context.Context, mgets map[uint16]cmds.Completed, keys []string) (ret map[string]RedisMessage, err error) {
+func parallelMGet(cc Client, ctx context.Context, mgets map[uint16]cmds.Completed, keys []string) (ret map[string]RedisMessage, err error) {
 	return doMGets(make(map[string]RedisMessage, len(keys)), mgets, func(cmd cmds.Completed) RedisResult {
-		return cc.do(ctx, cmd)
+		return cc.Do(ctx, cmd)
 	})
+}
+
+func parallelMSet(cc Client, ctx context.Context, msets map[uint16]cmds.Completed, ret map[string]error) map[string]error {
+	var mu sync.Mutex
+	util.ParallelVals(msets, func(cmd cmds.Completed) {
+		keys := make([]string, 0, (len(cmd.Commands())-1)/2)
+		for i := 1; i < len(cmd.Commands()); i += 2 {
+			keys = append(keys, cmd.Commands()[i])
+		}
+		ok, err := cc.Do(ctx, cmd).AsBool()
+		err2 := err
+		if err2 == nil && !ok {
+			err2 = ErrMSetNXNotSet
+		}
+		mu.Lock()
+		for _, k := range keys {
+			ret[k] = err2
+		}
+		mu.Unlock()
+	})
+	return ret
 }
 
 func doMGets(m map[string]RedisMessage, mgets map[uint16]cmds.Completed, fn func(cmd cmds.Completed) RedisResult) (ret map[string]RedisMessage, err error) {
 	var mu sync.Mutex
 	util.ParallelVals(mgets, func(cmd cmds.Completed) {
+		keys := make([]string, len(cmd.Commands())-1)
+		copy(keys, cmd.Commands()[1:])
 		arr, err2 := fn(cmd).ToArray()
 		mu.Lock()
 		if err2 != nil {
 			err = err2
 		} else {
-			arrayToKV(m, arr, cmd.Commands()[1:])
+			arrayToKV(m, arr, keys)
 		}
 		mu.Unlock()
 	})
 	if err != nil {
 		return nil, err
-	}
-	for _, mget := range mgets { // not recycle cmds if error, since cmds may be used later in pipe. consider recycle them by pipe
-		cmds.Put(mget.CommandSlice())
 	}
 	return m, nil
 }
@@ -108,3 +166,7 @@ func arrayToKV(m map[string]RedisMessage, arr []RedisMessage, keys []string) map
 	}
 	return m
 }
+
+// ErrMSetNXNotSet is used in the MSetNX helper when the underlying MSETNX response is 0.
+// Ref: https://redis.io/commands/msetnx/
+var ErrMSetNXNotSet = errors.New("MSETNX: no key was set")
