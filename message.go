@@ -463,7 +463,7 @@ func (m *RedisMessage) Error() error {
 		return Nil
 	}
 	if m.typ == '-' || m.typ == '!' {
-		// kvrocks: https://github.com/rueian/rueidis/issues/152#issuecomment-1333923750
+		// kvrocks: https://github.com/lsgndln/rueidis/issues/152#issuecomment-1333923750
 		mm := *m
 		mm.string = strings.TrimPrefix(m.string, "ERR ")
 		return (*RedisError)(&mm)

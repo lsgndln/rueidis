@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rueian/rueidis/internal/cmds"
+	"github.com/lsgndln/rueidis/internal/cmds"
 )
 
 //gocyclo:ignore

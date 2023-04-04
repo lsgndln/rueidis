@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/golang/mock/gomock"
+
+	"github.com/lsgndln/rueidis/internal/cmds"
+
 	"github.com/rueian/rueidis"
-	"github.com/rueian/rueidis/internal/cmds"
 )
 
 func Match(cmd ...string) gomock.Matcher {

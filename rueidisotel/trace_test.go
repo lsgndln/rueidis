@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rueian/rueidis"
-	"github.com/rueian/rueidis/internal/cmds"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -16,6 +14,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"github.com/lsgndln/rueidis/internal/cmds"
+
+	"github.com/rueian/rueidis"
 )
 
 func TestWithClient(t *testing.T) {

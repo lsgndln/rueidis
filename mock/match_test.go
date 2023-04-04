@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+
+	"github.com/lsgndln/rueidis/internal/cmds"
+
 	"github.com/rueian/rueidis"
-	"github.com/rueian/rueidis/internal/cmds"
 )
 
 func TestMatch_Completed(t *testing.T) {
@@ -63,7 +65,7 @@ func TestMatch_Other(t *testing.T) {
 		t.Fatalf("unexpected matched %s", m.String())
 	}
 	if m := Match("GET", "k"); m.Matches([]cmds.Completed{
-		cmds.NewBuilder(cmds.NoSlot).Get().Key("k").Build(), // https://github.com/rueian/rueidis/issues/120
+		cmds.NewBuilder(cmds.NoSlot).Get().Key("k").Build(), // https://github.com/lsgndln/rueidis/issues/120
 	}) {
 		t.Fatalf("unexpected matched %s", m.String())
 	}
@@ -78,7 +80,7 @@ func TestMatchFn_Other(t *testing.T) {
 	if m := MatchFn(func(cmd []string) bool {
 		return reflect.DeepEqual(cmd, []string{"GET", "k"})
 	}, "GET k"); m.Matches([]cmds.Completed{
-		cmds.NewBuilder(cmds.NoSlot).Get().Key("k").Build(), // https://github.com/rueian/rueidis/issues/120
+		cmds.NewBuilder(cmds.NoSlot).Get().Key("k").Build(), // https://github.com/lsgndln/rueidis/issues/120
 	}) {
 		t.Fatalf("unexpected matched %s", m.String())
 	}

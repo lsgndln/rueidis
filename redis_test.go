@@ -586,7 +586,7 @@ func TestSentinelClientIntegration(t *testing.T) {
 		Sentinel: SentinelOption{
 			MasterSet: "test",
 		},
-		SelectDB: 2, // https://github.com/rueian/rueidis/issues/138
+		SelectDB: 2, // https://github.com/lsgndln/rueidis/issues/138
 	})
 	if err != nil {
 		t.Fatal(err)

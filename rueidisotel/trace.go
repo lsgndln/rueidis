@@ -5,13 +5,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rueian/rueidis"
-	"github.com/rueian/rueidis/internal/cmds"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/lsgndln/rueidis/internal/cmds"
+
+	"github.com/rueian/rueidis"
 )
 
 var (
