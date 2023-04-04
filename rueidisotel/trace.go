@@ -13,11 +13,11 @@ import (
 
 	"github.com/lsgndln/rueidis/internal/cmds"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 var (
-	name   = "github.com/rueian/rueidis"
+	name   = "github.com/lsgndln/rueidis"
 	kind   = trace.WithSpanKind(trace.SpanKindClient)
 	tracer = otel.Tracer(name)
 	meter  = global.Meter(name)

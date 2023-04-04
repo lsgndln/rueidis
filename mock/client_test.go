@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/rueian/rueidis"
+
+	"github.com/lsgndln/rueidis"
 )
 
 func TestNewClient(t *testing.T) {

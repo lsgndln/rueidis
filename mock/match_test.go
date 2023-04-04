@@ -9,7 +9,7 @@ import (
 
 	"github.com/lsgndln/rueidis/internal/cmds"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 func TestMatch_Completed(t *testing.T) {

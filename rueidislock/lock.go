@@ -14,7 +14,7 @@ import (
 
 	"github.com/lsgndln/rueidis/internal/cmds"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 var sources sync.Pool

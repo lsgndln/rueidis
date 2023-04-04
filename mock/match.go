@@ -8,7 +8,7 @@ import (
 
 	"github.com/lsgndln/rueidis/internal/cmds"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 func Match(cmd ...string) gomock.Matcher {

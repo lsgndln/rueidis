@@ -39,7 +39,7 @@ import (
 	"github.com/lsgndln/rueidis/internal/cmds"
 	"github.com/lsgndln/rueidis/internal/util"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 const KeepTTL = -1

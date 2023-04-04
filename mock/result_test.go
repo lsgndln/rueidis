@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 func TestRedisString(t *testing.T) {

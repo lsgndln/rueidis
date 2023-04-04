@@ -10,7 +10,7 @@ import (
 
 	"github.com/lsgndln/rueidis/mock"
 
-	"github.com/rueian/rueidis"
+	"github.com/lsgndln/rueidis"
 )
 
 type hook struct{}
