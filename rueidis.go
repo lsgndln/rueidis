@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"log"
 	"math/rand"
 	"net"
 	"strings"
@@ -272,6 +273,7 @@ func NewClient(option ClientOption) (client Client, err error) {
 		return newSentinelClient(&option, makeConn)
 	}
 	if client, err = newClusterClient(&option, makeConn); err != nil {
+		log.Default().Println(err.Error())
 		if len(option.InitAddress) == 1 && (err.Error() == redisErrMsgCommandNotAllow || strings.Contains(strings.ToUpper(err.Error()), "CLUSTER")) {
 			option.PipelineMultiplex = singleClientMultiplex(option.PipelineMultiplex)
 			client, err = newSingleClient(&option, client.(*clusterClient).single(), makeConn)
