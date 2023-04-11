@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/lsgndln/rueidis/internal/cmds"
@@ -128,6 +127,8 @@ type ClientOption struct {
 	DisableCache bool
 	// AlwaysPipelining makes rueidis.Client always pipeline redis commands even if they are not issued concurrently.
 	AlwaysPipelining bool
+	// If the cluster is enabled
+	ClusterEnabled bool
 }
 
 // SentinelOption contains MasterSet,
@@ -272,16 +273,16 @@ func NewClient(option ClientOption) (client Client, err error) {
 		option.PipelineMultiplex = singleClientMultiplex(option.PipelineMultiplex)
 		return newSentinelClient(&option, makeConn)
 	}
-	if client, err = newClusterClient(&option, makeConn); err != nil {
+	client, err = newClusterClient(&option, makeConn)
+	if err != nil {
 		log.Default().Println(err.Error())
-		if len(option.InitAddress) == 1 && (err.Error() == redisErrMsgCommandNotAllow || strings.Contains(strings.ToUpper(err.Error()), "CLUSTER")) {
-			option.PipelineMultiplex = singleClientMultiplex(option.PipelineMultiplex)
-			client, err = newSingleClient(&option, client.(*clusterClient).single(), makeConn)
-		} else if client != (*clusterClient)(nil) {
-			client.Close()
-			return nil, err
-		}
 	}
+
+	if !option.ClusterEnabled {
+		option.PipelineMultiplex = singleClientMultiplex(option.PipelineMultiplex)
+		return newSingleClient(&option, client.(*clusterClient).single(), makeConn)
+	}
+
 	return client, err
 }
 
